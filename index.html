@@ -609,7 +609,11 @@ function recipeMissing(rec, mult = 1) {
   const miss = [];
   (rec.mainIngredients || []).forEach(ing => {
     const stock = findItemByName(ing.name);
-    const have = stock ? (stock.mode === "count" ? stock.qty : (stock.status === "out" ? 0 : 99)) : 0;
+    if (stock && stock.mode === "status") {
+      if (stock.status === "out") miss.push({ name: ing.name, qty: 1, unit: "db" });
+      return;
+    }
+    const have = stock ? (stock.qty || 0) : 0;
     const need = (ing.qty || 1) * mult;
     if (have < need) miss.push({ name: ing.name, qty: need - have, unit: ing.unit || "adag" });
   });
@@ -799,7 +803,8 @@ function computeShoppingList() {
 
     Object.entries(needed).forEach(([k, req]) => {
       const stock = findItemByName(req.name);
-      const have = stock ? (stock.mode === "count" ? stock.qty : (stock.status === "out" ? 0 : 99)) : 0;
+      if (stock && stock.mode === "status") return;
+      const have = stock ? (stock.qty || 0) : 0;
       if (req.qty > have) {
         const diff = req.qty - have;
         const key = "menu:" + k;
@@ -996,7 +1001,12 @@ Válaszolj CSAK JSON tömbbel:
 [{"name":"Csirkemell","rawName":"Kuracie prsia 500g","mode":"count","qty":1,"unit":"adag","location":"Hűtő","category":"Hús"}]
 Tárolás értékei: "Fagyasztó", "Hűtő", "Kamra". Kategória értékei: "Hús", "Tejtermék", "Zöldség-gyümölcs", "Szárazáru", "Egyéb". ${txt}`;
   } else {
-    prompt = `Nyerd ki a receptet magyarul. Válaszolj CSAK JSON objektummal:
+    prompt = `Nyerd ki a receptet magyarul.
+SZIGORÚ SZABÁLYOK:
+- TILOS grammot (g), dkg-t, kg-t, ml-t vagy evőkanalat (ek) írni!
+- A "mainIngredients" tömbbe CSAK a fő alapanyagokat tedd kis egész számmal (1 vagy 2) és "adag" vagy "db" egységgel.
+- A törzskészletet (olaj, liszt, rizs, tészta, só, fűszerek) KIZÁRÓLAG a "staples" tömbbe tedd mennyiség nélkül.
+Válaszolj CSAK JSON objektummal:
 {"name":"...","tags":["gyors"],"prepMinutes":30,"mainIngredients":[{"name":"Csirkemell","qty":1,"unit":"adag"}],"staples":["olaj","só"],"steps":"Rövid elkészítés"}
 Szöveg: ${txt}`;
   }
@@ -1080,11 +1090,21 @@ function saveAiRecipe() {
 }
 
 async function aiSuggestRecipes() {
-  const stockList = state.items.filter(i => (i.mode === "count" && i.qty > 0) || (i.mode === "status" && i.status !== "out")).map(i => i.name).join(", ");
-  if (!stockList) return toast("Üres a raktárkészlet!");
+  const mainItems = state.items.filter(i => i.mode === "count" && i.qty > 0).map(i => `${i.name} (${i.unit})`).join(", ");
+  const stapleItems = state.items.filter(i => i.mode === "status" && i.status !== "out").map(i => i.name).join(", ");
+  if (!mainItems && !stapleItems) return toast("Üres a raktárkészlet!");
   toast("AI receptötletek keresése...");
   try {
-    const ideas = await callGemini(`Adj 3 gyors, házias magyar receptötletet ezekből az alapanyagokból: ${stockList}. Válaszolj CSAK JSON tömbbel: [{"name":"...","tags":["ai-ötlet"],"prepMinutes":30,"mainIngredients":[{"name":"...","qty":1,"unit":"adag"}],"staples":["só"],"steps":"Rövid leírás"}]`);
+    const prompt = `Adj 3 gyors, házias magyar receptötletet a meglévő készletből.
+Fő alapanyagok (mértékegységgel): ${mainItems || "nincs"}.
+Törzskészlet (mennyiség nélkül): ${stapleItems || "nincs"}.
+SZIGORÚ SZABÁLYOK:
+- TILOS grammot (g), dkg-t, kg-t, ml-t vagy evőkanalat (ek) írni!
+- A "mainIngredients" tömbbe CSAK a fő alapanyagokat tedd, kis egész számmal (1 vagy 2) és "adag" vagy "db" egységgel.
+- A törzskészletet (pl. rizs, olaj, tészta, liszt, fűszerek) KIZÁRÓLAG a "staples" tömbbe tedd, mennyiség nélkül.
+Válaszolj CSAK JSON tömbbel:
+[{"name":"...","tags":["ai-ötlet"],"prepMinutes":30,"mainIngredients":[{"name":"Csirkemell","qty":1,"unit":"adag"}],"staples":["Rizs","Étolaj"],"steps":"Rövid leírás"}]`;
+    const ideas = await callGemini(prompt);
     if (Array.isArray(ideas) && ideas.length) {
       ideas.forEach(r => state.recipes.unshift(Object.assign({ id: uid(), lastCookedAt: null, updatedAt: Date.now() }, r)));
       saveLocal();
