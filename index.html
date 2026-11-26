@@ -319,11 +319,11 @@ function defaultState() {
     items: [
       { id: uid(), name: "Csirkemell", aliases: ["cs.mell", "kuracie prsia"], location: "Fagyasztó", category: "Hús", mode: "count", qty: 3, unit: "adag", status: "ok", addedAt: today, favorite: true, updatedAt: 0 },
       { id: uid(), name: "Tejföl", aliases: ["smotana"], location: "Hűtő", category: "Tejtermék", mode: "count", qty: 1, unit: "db", status: "ok", addedAt: today, favorite: true, updatedAt: 0 },
-      { id: uid(), name: "Étolaj", aliases: ["napraforgó olaj"], location: "Kamra", category: "Szárazáru", mode: "status", qty: 1, unit: "db", status: "ok", addedAt: today, favorite: true, updatedAt: 0 },
-      { id: uid(), name: "Rizs", aliases: ["jázmin rizs"], location: "Kamra", category: "Szárazáru", mode: "status", qty: 1, unit: "csomag", status: "low", addedAt: today, favorite: true, updatedAt: 0 }
+      { id: uid(), name: "Rizs", aliases: ["jázmin rizs"], location: "Kamra", category: "Szárazáru", mode: "count", qty: 1, unit: "csomag", status: "ok", addedAt: today, favorite: true, updatedAt: 0 },
+      { id: uid(), name: "Étolaj", aliases: ["napraforgó olaj"], location: "Kamra", category: "Szárazáru", mode: "status", qty: 1, unit: "db", status: "ok", addedAt: today, favorite: true, updatedAt: 0 }
     ],
     recipes: [
-      { id: uid(), name: "Tejfölös csirkemell rizzsel", tags: ["gyors", "fagyasztóból"], prepMinutes: 30, mainIngredients: [{ name: "Csirkemell", qty: 1, unit: "adag" }, { name: "Tejföl", qty: 1, unit: "db" }], staples: ["Rizs", "Étolaj"], steps: "Csirkemellet lepirítjuk, tejföllel összeforraljuk, rizzsel tálaljuk.", lastCookedAt: null, updatedAt: 0 }
+      { id: uid(), name: "Tejfölös csirkemell rizzsel", tags: ["gyors", "fagyasztóból"], prepMinutes: 30, mainIngredients: [{ name: "Csirkemell", qty: 1, unit: "adag" }, { name: "Tejföl", qty: 1, unit: "db" }, { name: "Rizs", qty: 1, unit: "csomag" }], staples: ["Étolaj", "só"], steps: "Csirkemellet lepirítjuk, tejföllel összeforraljuk, rizzsel tálaljuk.", lastCookedAt: null, updatedAt: 0 }
     ],
     menu: {},
     manualShopping: [],
@@ -610,12 +610,19 @@ function recipeMissing(rec, mult = 1) {
   (rec.mainIngredients || []).forEach(ing => {
     const stock = findItemByName(ing.name);
     if (stock && stock.mode === "status") {
-      if (stock.status === "out") miss.push({ name: ing.name, qty: 1, unit: "db" });
+      if (stock.status === "out") miss.push({ name: stock.name, qty: 1, unit: "db", isStaple: true });
       return;
     }
     const have = stock ? (stock.qty || 0) : 0;
     const need = (ing.qty || 1) * mult;
     if (have < need) miss.push({ name: ing.name, qty: need - have, unit: ing.unit || "adag" });
+  });
+  (rec.staples || []).forEach(stName => {
+    const stock = findItemByName(stName);
+    if (!stock) return;
+    if ((stock.mode === "status" && stock.status === "out") || (stock.mode === "count" && (stock.qty || 0) <= 0)) {
+      miss.push({ name: stock.name, qty: 1, unit: stock.mode === "count" ? stock.unit : "db", isStaple: true });
+    }
   });
   return miss;
 }
@@ -626,14 +633,20 @@ function renderRecipes() {
   document.getElementById("recipeCount").textContent = `${list.length} recept`;
   document.getElementById("recipeList").innerHTML = list.length ? list.map(r => {
     const miss = recipeMissing(r, 1);
-    const badge = miss.length === 0 ? `<span class="badge b-ok">Készleten</span>` : `<span class="badge b-warn">Hiányzik: ${miss.map(m => `${m.qty} ${m.unit} ${m.name}`).join(", ")}</span>`;
+    const badge = miss.length === 0
+      ? `<span class="badge b-ok">Készleten</span>`
+      : `<span class="badge b-warn">Hiányzik: ${miss.map(m => m.isStaple ? m.name : `${m.qty} ${m.unit} ${m.name}`).join(", ")}</span>`;
     const tags = (r.tags || []).map(t => `<span class="badge b-muted">#${esc(t)}</span>`).join(" ");
+    const staplesLine = (r.staples || []).length
+      ? `<div class="muted" style="margin-top:2px;">Alap: ${(r.staples || []).map(s => esc(s)).join(", ")}</div>`
+      : "";
     return `<div class="card">
       <div class="row">
         <div style="flex:1;cursor:pointer;" onclick="openRecipeModal('${r.id}')">
           <strong>${esc(r.name)}</strong> <span class="muted">(${r.prepMinutes || 30} perc)</span>
           <div style="margin-top:4px;display:flex;gap:4px;flex-wrap:wrap;">${badge} ${tags}</div>
           <div class="muted" style="margin-top:4px;">Fő: ${(r.mainIngredients || []).map(i => `${i.name} (${i.qty} ${i.unit})`).join(", ") || "—"}</div>
+          ${staplesLine}
         </div>
         <button class="btn btn-soft btn-sm" onclick="cookRecipe('${r.id}',1)">Megfőztem ✓</button>
       </div>
@@ -996,18 +1009,22 @@ Szabályok:
 - Minden élelmiszer nevét fordítsd le egyszerű, rövid MAGYAR alapanyagnévre. Ha létezik a meglévő raktárban hasonló (${existing}), azt a pontos nevet használd!
 - Szedd le a márkaneveket és kiszereléseket, de az eredeti blokkszöveget add meg a "rawName" mezőben.
 - Hagyd ki a nem élelmiszer sorokat (betétdíj, záloha, obal, szatyor, tisztítószer, kedvezmény, végösszeg).
-- Alapdolgoknál (olaj, liszt, só, cukor, rizs, tészta, fűszer) a mode legyen "status", húsoknál/tejterméknél/zöldségnél/fagyasztottnál "count" egész számú qty-vel.
+- Alapdolgoknál (olaj, liszt, só, cukor, fűszer) a mode legyen "status", húsoknál/tejterméknél/zöldségnél/fagyasztottnál/csomagos köreteknél "count" egész számú qty-vel.
 Válaszolj CSAK JSON tömbbel:
 [{"name":"Csirkemell","rawName":"Kuracie prsia 500g","mode":"count","qty":1,"unit":"adag","location":"Hűtő","category":"Hús"}]
 Tárolás értékei: "Fagyasztó", "Hűtő", "Kamra". Kategória értékei: "Hús", "Tejtermék", "Zöldség-gyümölcs", "Szárazáru", "Egyéb". ${txt}`;
   } else {
+    const mainItems = state.items.filter(i => i.mode === "count").map(i => `${i.name} (${i.unit})`).join(", ");
+    const stapleItems = state.items.filter(i => i.mode === "status").map(i => i.name).join(", ");
     prompt = `Nyerd ki a receptet magyarul.
+Darabra/adagra követett fő alapanyagok a raktárban: ${mainItems || "nincs"}.
+Törzskészlet (állapot alapú): ${stapleItems || "nincs"}.
 SZIGORÚ SZABÁLYOK:
 - TILOS grammot (g), dkg-t, kg-t, ml-t vagy evőkanalat (ek) írni!
-- A "mainIngredients" tömbbe CSAK a fő alapanyagokat tedd kis egész számmal (1 vagy 2) és "adag" vagy "db" egységgel.
-- A törzskészletet (olaj, liszt, rizs, tészta, só, fűszerek) KIZÁRÓLAG a "staples" tömbbe tedd mennyiség nélkül.
+- A "mainIngredients" tömbbe tedd a fő hozzávalókat (és mindent, ami a fenti fő alapanyagok között szerepel) kis egész számmal (1 vagy 2) és "adag", "db" vagy "csomag" egységgel.
+- A törzskészletet és alap fűszereket KIZÁRÓLAG a "staples" tömbbe tedd mennyiség nélkül.
 Válaszolj CSAK JSON objektummal:
-{"name":"...","tags":["gyors"],"prepMinutes":30,"mainIngredients":[{"name":"Csirkemell","qty":1,"unit":"adag"}],"staples":["olaj","só"],"steps":"Rövid elkészítés"}
+{"name":"...","tags":["gyors"],"prepMinutes":30,"mainIngredients":[{"name":"Csirkemell","qty":1,"unit":"adag"}],"staples":["Étolaj","só"],"steps":"Rövid elkészítés"}
 Szöveg: ${txt}`;
   }
 
@@ -1027,6 +1044,7 @@ function renderAiPreview() {
     area.innerHTML = `<div class="card">
       <strong>${esc(aiParsed.name)}</strong>
       <div class="muted" style="margin:6px 0;">Fő: ${(aiParsed.mainIngredients || []).map(i => `${i.name} (${i.qty} ${i.unit})`).join(", ")}</div>
+      ${(aiParsed.staples || []).length ? `<div class="muted" style="margin-bottom:6px;">Alap: ${(aiParsed.staples || []).map(s => esc(s)).join(", ")}</div>` : ""}
       <div class="muted">${esc(aiParsed.steps || "")}</div>
       <button class="btn btn-primary" style="width:100%;margin-top:10px;" onclick="saveAiRecipe()">Recept mentése</button>
     </div>`;
@@ -1100,10 +1118,10 @@ Fő alapanyagok (mértékegységgel): ${mainItems || "nincs"}.
 Törzskészlet (mennyiség nélkül): ${stapleItems || "nincs"}.
 SZIGORÚ SZABÁLYOK:
 - TILOS grammot (g), dkg-t, kg-t, ml-t vagy evőkanalat (ek) írni!
-- A "mainIngredients" tömbbe CSAK a fő alapanyagokat tedd, kis egész számmal (1 vagy 2) és "adag" vagy "db" egységgel.
-- A törzskészletet (pl. rizs, olaj, tészta, liszt, fűszerek) KIZÁRÓLAG a "staples" tömbbe tedd, mennyiség nélkül.
+- A "mainIngredients" tömbbe a Fő alapanyagok listájából tedd a hozzávalókat, kis egész számmal (1 vagy 2) és pontosan a zárójelben megadott egységgel.
+- A "staples" tömbbe CSAK a Törzskészlet listából (és alap fűszerekből: só, bors, paprika) tegyél tételeket, mennyiség nélkül.
 Válaszolj CSAK JSON tömbbel:
-[{"name":"...","tags":["ai-ötlet"],"prepMinutes":30,"mainIngredients":[{"name":"Csirkemell","qty":1,"unit":"adag"}],"staples":["Rizs","Étolaj"],"steps":"Rövid leírás"}]`;
+[{"name":"...","tags":["ai-ötlet"],"prepMinutes":30,"mainIngredients":[{"name":"Csirkemell","qty":1,"unit":"adag"}],"staples":["Étolaj","só"],"steps":"Rövid leírás"}]`;
     const ideas = await callGemini(prompt);
     if (Array.isArray(ideas) && ideas.length) {
       ideas.forEach(r => state.recipes.unshift(Object.assign({ id: uid(), lastCookedAt: null, updatedAt: Date.now() }, r)));
