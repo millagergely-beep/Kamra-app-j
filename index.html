@@ -101,7 +101,6 @@
   </header>
 
   <main>
-    <!-- 1. RAKTÁR -->
     <section id="tab-stock" class="tab-view active">
       <div class="row" style="margin-bottom:8px;">
         <input id="stockSearch" type="search" placeholder="Keresés a raktárban..." oninput="renderStock()" style="flex:1;" />
@@ -116,7 +115,6 @@
       <div id="stockList"></div>
     </section>
 
-    <!-- 2. RECEPTEK -->
     <section id="tab-recipes" class="tab-view">
       <div class="row" style="margin-bottom:8px;">
         <input id="recipeSearch" type="search" placeholder="Recept vagy címke keresése..." oninput="renderRecipes()" style="flex:1;" />
@@ -129,7 +127,6 @@
       <div id="recipeList"></div>
     </section>
 
-    <!-- 3. HETI MENÜ -->
     <section id="tab-menu" class="tab-view">
       <div class="card">
         <div class="row">
@@ -146,7 +143,6 @@
       <div id="menuDays"></div>
     </section>
 
-    <!-- 4. BEVÁSÁRLÓLISTA -->
     <section id="tab-shop" class="tab-view">
       <div class="card">
         <div class="row" style="margin-bottom:8px;">
@@ -172,7 +168,6 @@
     <button data-tab="shop" onclick="switchTab('shop')"><span class="ico">🛒</span>Lista<span id="shopBadge" class="nav-badge" style="display:none;">0</span></button>
   </nav>
 
-  <!-- TÉTEL MODAL -->
   <div id="itemModal" class="modal-bg" onclick="if(event.target===this)closeModal('itemModal')">
     <div class="modal">
       <div class="row"><h3 id="itemModalTitle" style="margin:0;">Új alapanyag</h3><button class="btn btn-ghost btn-sm" onclick="closeModal('itemModal')">✕</button></div>
@@ -218,7 +213,6 @@
     </div>
   </div>
 
-  <!-- RECEPT MODAL -->
   <div id="recipeModal" class="modal-bg" onclick="if(event.target===this)closeModal('recipeModal')">
     <div class="modal">
       <div class="row"><h3 id="recipeModalTitle" style="margin:0;">Új recept</h3><button class="btn btn-ghost btn-sm" onclick="closeModal('recipeModal')">✕</button></div>
@@ -230,7 +224,7 @@
         <div><label>Elkészítés (perc)</label><input id="recPrep" type="number" value="30" /></div>
       </div>
       <label>Fő hozzávalók (soronként: Név; adagszám; egység — pl. Csirkemell; 1; adag)</label>
-      <textarea id="recMain" rows="4" placeholder="Csirkemell; 1; adag&#10;Tejszín; 1; db"></textarea>
+      <textarea id="recMain" rows="4" placeholder="Csirkemell; 1; adag&#10;Tejföl; 1; db"></textarea>
       <label>Törzskészlet / alapdolgok (vesszővel, mennyiség nélkül)</label>
       <input id="recStaples" placeholder="rizs, olaj, só, bors" />
       <label>Elkészítés / megjegyzés</label>
@@ -242,7 +236,6 @@
     </div>
   </div>
 
-  <!-- AI FELISMERÉS MODAL -->
   <div id="aiModal" class="modal-bg" onclick="if(event.target===this)closeModal('aiModal')">
     <div class="modal">
       <div class="row"><h3 style="margin:0;">✨ AI Felismerés</h3><button class="btn btn-ghost btn-sm" onclick="closeModal('aiModal')">✕</button></div>
@@ -269,7 +262,6 @@
     </div>
   </div>
 
-  <!-- BEÁLLÍTÁSOK / SZINKRON / NAPLÓ MODAL -->
   <div id="settingsModal" class="modal-bg" onclick="if(event.target===this)closeModal('settingsModal')">
     <div class="modal">
       <div class="row"><h3 style="margin:0;">⚙️ Szinkron, Mentés és Napló</h3><button class="btn btn-ghost btn-sm" onclick="closeModal('settingsModal')">✕</button></div>
@@ -283,6 +275,10 @@
         <button class="btn btn-ghost" onclick="exportJson()">⬇️ JSON Export</button>
         <label class="btn btn-ghost" style="margin:0;">⬆️ JSON Import<input type="file" accept=".json" style="display:none;" onchange="importJson(this.files[0])" /></label>
       </div>
+
+      <label style="margin-top:12px;">Gyors receptlista beillesztése (JSON tömb)</label>
+      <textarea id="bulkRecipeJson" rows="3" placeholder='[{"name":"Túrós tészta","tags":["gyors"],"prepMinutes":25,"mainIngredients":[{"name":"Tészta","qty":1,"unit":"csomag"}],"staples":["só"],"steps":"Kifőzzük és összekeverjük."}]'></textarea>
+      <button class="btn btn-soft btn-sm" style="margin-top:6px;" onclick="importBulkRecipes()">+ Receptek hozzáadása</button>
 
       <h4 style="margin:14px 0 6px;">Utóbbi események</h4>
       <div id="historyList" class="muted" style="max-height:180px;overflow-y:auto;"></div>
@@ -359,7 +355,6 @@ function addHistory(type, label) {
   if (state.history.length > 60) state.history.length = 60;
 }
 
-/* ---------- HÁTTÉRSZINKRON (NEM BLOKKOLÓ) ---------- */
 function setSyncDot(cls, title) {
   const d = document.getElementById("syncDot");
   d.className = "sync-dot " + cls;
@@ -427,7 +422,6 @@ document.addEventListener("visibilitychange", () => {
   }
 });
 
-/* ---------- NAVIGÁCIÓ ---------- */
 function switchTab(tab) {
   document.querySelectorAll(".tab-view").forEach(el => el.classList.remove("active"));
   document.getElementById("tab-" + tab).classList.add("active");
@@ -441,7 +435,6 @@ function switchTab(tab) {
 function openModal(id) { document.getElementById(id).classList.add("open"); }
 function closeModal(id) { document.getElementById(id).classList.remove("open"); }
 
-/* ---------- RAKTÁR (RÉSZLEGES DOM FRISSÍTÉSSEL) ---------- */
 function findItemByName(name) {
   const n = norm(name);
   return state.items.find(i => norm(i.name) === n || (i.aliases || []).some(a => norm(a) === n));
@@ -604,7 +597,6 @@ function deleteCurrentItem() {
   renderStock();
 }
 
-/* ---------- RECEPTEK ---------- */
 function recipeMissing(rec, mult = 1) {
   const miss = [];
   (rec.mainIngredients || []).forEach(ing => {
@@ -715,7 +707,6 @@ function deleteCurrentRecipe() {
   renderRecipes();
 }
 
-/* ---------- HETI MENÜ ---------- */
 function renderMenu() {
   const opts = `<option value="">— nincs választva —</option>` + state.recipes.map(r => `<option value="${r.id}">${esc(r.name)}</option>`).join("");
   let planned = 0;
@@ -794,7 +785,6 @@ function autoFillMenu() {
 
 function clearMenu() { if (confirm("Üríted a heti menüt?")) { state.menu = {}; saveLocal(); renderMenu(); } }
 
-/* ---------- BEVÁSÁRLÓLISTA (BOLTI KATEGÓRIÁKKAL) ---------- */
 function computeShoppingList() {
   const list = [];
   if (state.autoSyncMenu) {
@@ -917,7 +907,6 @@ function moveCheckedToStock() {
   toast(`${checked.length} tétel bekerült a raktárba!`);
 }
 
-/* ---------- AI FELISMERÉS (BÁRMILYEN BOLT / NYELV / PDF / TÖBB KÉP) ---------- */
 function openAiModal() {
   aiPendingFiles = [];
   aiParsed = null;
@@ -1132,9 +1121,9 @@ Válaszolj CSAK JSON tömbbel:
   } catch (e) { toast("AI hiba: " + e.message); }
 }
 
-/* ---------- BEÁLLÍTÁSOK, EXPORT/IMPORT ---------- */
 function openSettingsModal() {
   document.getElementById("cloudUrlInput").value = getCloudUrl();
+  document.getElementById("bulkRecipeJson").value = "";
   document.getElementById("historyList").innerHTML = state.history.length
     ? state.history.map(h => `<div style="padding:4px 0;border-bottom:1px solid var(--border);">${h.type === "cook" ? "🍳" : "🛒"} <strong>${h.date}</strong> – ${esc(h.label)}</div>`).join("")
     : "Még nincs naplózott esemény.";
@@ -1147,6 +1136,35 @@ function saveCloudUrl() {
   else localStorage.removeItem(CLOUD_URL_KEY);
   pullFromCloud(false);
   toast("Beállítás mentve");
+}
+
+function importBulkRecipes() {
+  const raw = document.getElementById("bulkRecipeJson").value.trim();
+  if (!raw) return toast("Illessz be JSON recepttömböt!");
+  try {
+    const arr = JSON.parse(raw);
+    if (!Array.isArray(arr) || !arr.length) throw new Error();
+    let added = 0;
+    arr.forEach(r => {
+      if (!r || !r.name) return;
+      state.recipes.push({
+        id: uid(),
+        name: String(r.name).trim(),
+        tags: Array.isArray(r.tags) ? r.tags : [],
+        prepMinutes: parseInt(r.prepMinutes, 10) || 30,
+        mainIngredients: Array.isArray(r.mainIngredients) ? r.mainIngredients : [],
+        staples: Array.isArray(r.staples) ? r.staples : [],
+        steps: String(r.steps || "").trim(),
+        lastCookedAt: null,
+        updatedAt: Date.now()
+      });
+      added++;
+    });
+    saveLocal();
+    document.getElementById("bulkRecipeJson").value = "";
+    renderRecipes();
+    toast(`${added} recept hozzáadva!`);
+  } catch { toast("Hibás JSON formátum!"); }
 }
 
 function exportJson() {
