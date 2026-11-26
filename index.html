@@ -1,0 +1,1147 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#0f766e" />
+  <link rel="manifest" href="./manifest.json" />
+  <title>Kamra & Konyha Leltár</title>
+  <style>
+    :root {
+      --bg: #f1f5f9; --card: #ffffff; --text: #0f172a; --muted: #64748b;
+      --border: #e2e8f0; --primary: #0f766e; --primary-light: #ccfbf1;
+      --danger: #dc2626; --danger-light: #fee2e2; --warn: #d97706; --warn-light: #fef3c7;
+      --ok: #16a34a; --ok-light: #dcfce7; --radius: 14px;
+    }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); padding-bottom: 84px; }
+    header { position: sticky; top: 0; z-index: 20; background: var(--primary); color: #fff; padding: 12px 14px; display: flex; align-items: center; justify-content: space-between; gap: 8px; box-shadow: 0 2px 8px rgba(0,0,0,.12); }
+    header h1 { margin: 0; font-size: 17px; font-weight: 700; display: flex; align-items: center; gap: 6px; }
+    .hdr-btns { display: flex; gap: 6px; align-items: center; }
+    .icon-btn { background: rgba(255,255,255,.16); color: #fff; border: none; border-radius: 10px; padding: 8px 10px; font-size: 14px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; }
+    .icon-btn:active { transform: scale(.96); }
+    .sync-dot { width: 8px; height: 8px; border-radius: 50%; background: #4ade80; display: inline-block; }
+    .sync-dot.pending { background: #fbbf24; }
+    .sync-dot.err { background: #f87171; }
+    .sync-dot.off { background: #94a3b8; }
+
+    main { max-width: 720px; margin: 0 auto; padding: 12px; }
+    .tab-view { display: none; }
+    .tab-view.active { display: block; }
+
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; margin-bottom: 10px; box-shadow: 0 1px 2px rgba(0,0,0,.03); }
+    .row { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+    .chips { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 6px; margin-bottom: 8px; scrollbar-width: none; }
+    .chips::-webkit-scrollbar { display: none; }
+    .chip { border: 1px solid var(--border); background: var(--card); color: var(--text); border-radius: 999px; padding: 7px 12px; font-size: 13px; font-weight: 600; white-space: nowrap; cursor: pointer; }
+    .chip.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+
+    .btn { border: none; border-radius: 10px; padding: 10px 14px; font-size: 14px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+    .btn:active { transform: scale(.97); }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-soft { background: var(--primary-light); color: var(--primary); }
+    .btn-ghost { background: var(--bg); color: var(--text); border: 1px solid var(--border); }
+    .btn-danger { background: var(--danger-light); color: var(--danger); }
+    .btn-sm { padding: 6px 10px; font-size: 12px; border-radius: 8px; }
+
+    input, select, textarea { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; font-size: 15px; font-family: inherit; background: #fff; color: var(--text); }
+    label { display: block; font-size: 12px; font-weight: 600; color: var(--muted); margin: 8px 0 4px; }
+
+    .badge { font-size: 11px; font-weight: 700; padding: 3px 7px; border-radius: 6px; display: inline-block; }
+    .b-ok { background: var(--ok-light); color: var(--ok); }
+    .b-warn { background: var(--warn-light); color: var(--warn); }
+    .b-err { background: var(--danger-light); color: var(--danger); }
+    .b-muted { background: var(--bg); color: var(--muted); }
+    .b-teal { background: var(--primary-light); color: var(--primary); }
+
+    .qty-ctrl { display: inline-flex; align-items: center; gap: 6px; }
+    .qty-btn { width: 38px; height: 38px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg); font-size: 20px; font-weight: 700; cursor: pointer; color: var(--text); }
+    .qty-btn:active { background: var(--primary-light); }
+    .qty-val { min-width: 58px; text-align: center; font-weight: 700; font-size: 15px; }
+
+    .status-group { display: inline-flex; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+    .status-btn { border: none; background: #fff; padding: 7px 9px; font-size: 12px; font-weight: 700; cursor: pointer; color: var(--muted); }
+    .status-btn.s-ok { background: var(--ok); color: #fff; }
+    .status-btn.s-low { background: var(--warn); color: #fff; }
+    .status-btn.s-out { background: var(--danger); color: #fff; }
+
+    .quick-bar { display: flex; gap: 6px; overflow-x: auto; padding: 4px 0 8px; }
+    .quick-pill { background: #fff; border: 1px dashed var(--primary); color: var(--primary); border-radius: 999px; padding: 6px 11px; font-size: 12px; font-weight: 600; white-space: nowrap; cursor: pointer; }
+
+    nav.bottom { position: fixed; bottom: 0; left: 0; right: 0; z-index: 20; background: #fff; border-top: 1px solid var(--border); display: grid; grid-template-columns: repeat(4, 1fr); padding: 6px 4px calc(6px + env(safe-area-inset-bottom)); }
+    nav.bottom button { background: none; border: none; color: var(--muted); font-size: 11px; font-weight: 600; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 4px; cursor: pointer; position: relative; }
+    nav.bottom button.active { color: var(--primary); }
+    nav.bottom button .ico { font-size: 20px; line-height: 1; }
+    .nav-badge { position: absolute; top: 0; right: 16%; background: var(--danger); color: #fff; font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 999px; }
+
+    .modal-bg { position: fixed; inset: 0; z-index: 50; background: rgba(15,23,42,.55); display: none; align-items: flex-end; justify-content: center; }
+    .modal-bg.open { display: flex; }
+    .modal { background: #fff; width: 100%; max-width: 640px; max-height: 90vh; overflow-y: auto; border-radius: 18px 18px 0 0; padding: 16px; }
+    @media (min-width: 640px) { .modal-bg { align-items: center; } .modal { border-radius: 18px; } }
+
+    .toast { position: fixed; bottom: 84px; left: 50%; transform: translateX(-50%); background: #0f172a; color: #fff; padding: 10px 16px; border-radius: 10px; font-size: 13px; font-weight: 600; z-index: 60; opacity: 0; pointer-events: none; transition: opacity .2s; max-width: 90%; text-align: center; }
+    .toast.show { opacity: 1; }
+    .muted { color: var(--muted); font-size: 12px; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .cat-title { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin: 12px 0 6px; }
+    .check-row { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--border); }
+    .check-row:last-child { border-bottom: none; }
+    .check-row input[type=checkbox] { width: 22px; height: 22px; flex-shrink: 0; accent-color: var(--primary); }
+    .strike { text-decoration: line-through; color: var(--muted); }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🧺 Kamra <span id="syncDot" class="sync-dot pending" title="Csatlakozás..."></span></h1>
+    <div class="hdr-btns">
+      <button class="icon-btn" onclick="openAiModal()">✨ AI</button>
+      <button class="icon-btn" onclick="syncNow()" title="Azonnali szinkron">🔄</button>
+      <button class="icon-btn" onclick="openSettingsModal()" title="Beállítások és napló">⚙️</button>
+    </div>
+  </header>
+
+  <main>
+    <!-- 1. RAKTÁR -->
+    <section id="tab-stock" class="tab-view active">
+      <div class="row" style="margin-bottom:8px;">
+        <input id="stockSearch" type="search" placeholder="Keresés a raktárban..." oninput="renderStock()" style="flex:1;" />
+        <button class="btn btn-primary" onclick="openItemModal()">+ Új</button>
+      </div>
+      <div class="chips" id="locChips"></div>
+      <div class="row" style="margin-bottom:6px;">
+        <span class="muted" id="stockSummary"></span>
+        <button class="btn btn-ghost btn-sm" id="fifoBtn" onclick="toggleFifo()">📅 FIFO rendezés</button>
+      </div>
+      <div id="quickBar" class="quick-bar"></div>
+      <div id="stockList"></div>
+    </section>
+
+    <!-- 2. RECEPTEK -->
+    <section id="tab-recipes" class="tab-view">
+      <div class="row" style="margin-bottom:8px;">
+        <input id="recipeSearch" type="search" placeholder="Recept vagy címke keresése..." oninput="renderRecipes()" style="flex:1;" />
+        <button class="btn btn-primary" onclick="openRecipeModal()">+ Recept</button>
+      </div>
+      <div class="row" style="margin-bottom:10px;">
+        <button class="btn btn-soft btn-sm" onclick="aiSuggestRecipes()">✨ AI receptötlet raktárból</button>
+        <span class="muted" id="recipeCount"></span>
+      </div>
+      <div id="recipeList"></div>
+    </section>
+
+    <!-- 3. HETI MENÜ -->
+    <section id="tab-menu" class="tab-view">
+      <div class="card">
+        <div class="row">
+          <div>
+            <strong>Heti tervező</strong>
+            <div class="muted" id="menuSummary"></div>
+          </div>
+          <div class="row">
+            <button class="btn btn-soft btn-sm" onclick="autoFillMenu()">⚡ Gyors javaslat</button>
+            <button class="btn btn-ghost btn-sm" onclick="clearMenu()">Törlés</button>
+          </div>
+        </div>
+      </div>
+      <div id="menuDays"></div>
+    </section>
+
+    <!-- 4. BEVÁSÁRLÓLISTA -->
+    <section id="tab-shop" class="tab-view">
+      <div class="card">
+        <div class="row" style="margin-bottom:8px;">
+          <label style="margin:0; display:flex; align-items:center; gap:8px; font-size:14px; color:var(--text);">
+            <input type="checkbox" id="autoMenuToggle" onchange="toggleAutoMenu(this.checked)" style="width:20px;height:20px;" />
+            Igazítás a heti menühöz és törzskészlethez
+          </label>
+        </div>
+        <div class="row">
+          <input id="manualShopInput" placeholder="Kézi tétel hozzáadása..." style="flex:1;" onkeydown="if(event.key==='Enter')addManualShop()" />
+          <button class="btn btn-primary" onclick="addManualShop()">+</button>
+        </div>
+      </div>
+      <div id="shopList"></div>
+      <button class="btn btn-primary" style="width:100%; margin-top:10px;" onclick="moveCheckedToStock()">📦 Kipipáltak áthelyezése a raktárba</button>
+    </section>
+  </main>
+
+  <nav class="bottom">
+    <button class="active" data-tab="stock" onclick="switchTab('stock')"><span class="ico">📦</span>Raktár</button>
+    <button data-tab="recipes" onclick="switchTab('recipes')"><span class="ico">🍳</span>Receptek</button>
+    <button data-tab="menu" onclick="switchTab('menu')"><span class="ico">📅</span>Heti menü</button>
+    <button data-tab="shop" onclick="switchTab('shop')"><span class="ico">🛒</span>Lista<span id="shopBadge" class="nav-badge" style="display:none;">0</span></button>
+  </nav>
+
+  <!-- TÉTEL MODAL -->
+  <div id="itemModal" class="modal-bg" onclick="if(event.target===this)closeModal('itemModal')">
+    <div class="modal">
+      <div class="row"><h3 id="itemModalTitle" style="margin:0;">Új alapanyag</h3><button class="btn btn-ghost btn-sm" onclick="closeModal('itemModal')">✕</button></div>
+      <input type="hidden" id="editItemId" />
+      <label>Megnevezés</label>
+      <input id="itemName" list="itemNamesDatalist" placeholder="pl. Csirkemell" />
+      <datalist id="itemNamesDatalist"></datalist>
+      <div class="grid-2">
+        <div>
+          <label>Tárolás</label>
+          <select id="itemLoc"><option>Fagyasztó</option><option>Hűtő</option><option>Kamra</option></select>
+        </div>
+        <div>
+          <label>Bolti kategória</label>
+          <select id="itemCat"><option>Hús</option><option>Tejtermék</option><option>Zöldség-gyümölcs</option><option>Szárazáru</option><option>Egyéb</option></select>
+        </div>
+      </div>
+      <label>Követés módja</label>
+      <select id="itemMode" onchange="toggleModeFields()">
+        <option value="count">Darab / Adag (fő alapanyag)</option>
+        <option value="status">Törzskészlet (Van / Fogyóban / Elfogyott)</option>
+      </select>
+      <div id="countFields" class="grid-2">
+        <div><label>Mennyiség</label><input id="itemQty" type="number" min="0" value="1" /></div>
+        <div><label>Egység</label><select id="itemUnit"><option>adag</option><option>db</option><option>csomag</option><option>üveg</option></select></div>
+      </div>
+      <div id="statusFields" style="display:none;">
+        <label>Állapot</label>
+        <select id="itemStatus"><option value="ok">Van</option><option value="low">Fogyóban</option><option value="out">Elfogyott</option></select>
+      </div>
+      <div class="grid-2">
+        <div><label>Betétel dátuma (FIFO)</label><input id="itemDate" type="date" /></div>
+        <div style="display:flex;align-items:flex-end;padding-bottom:6px;">
+          <label style="display:flex;align-items:center;gap:6px;margin:0;font-size:14px;color:var(--text);">
+            <input type="checkbox" id="itemFav" style="width:18px;height:18px;" /> Kedvenc (gyors visszavétel)
+          </label>
+        </div>
+      </div>
+      <div class="row" style="margin-top:14px;">
+        <button id="deleteItemBtn" class="btn btn-danger" style="display:none;" onclick="deleteCurrentItem()">Törlés</button>
+        <button class="btn btn-primary" style="flex:1;" onclick="saveItem()">Mentés</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- RECEPT MODAL -->
+  <div id="recipeModal" class="modal-bg" onclick="if(event.target===this)closeModal('recipeModal')">
+    <div class="modal">
+      <div class="row"><h3 id="recipeModalTitle" style="margin:0;">Új recept</h3><button class="btn btn-ghost btn-sm" onclick="closeModal('recipeModal')">✕</button></div>
+      <input type="hidden" id="editRecipeId" />
+      <label>Recept neve</label>
+      <input id="recName" placeholder="pl. Tejszínes csirkemell rizzsel" />
+      <div class="grid-2">
+        <div><label>Címkék (vesszővel)</label><input id="recTags" placeholder="gyors, fagyasztóból" /></div>
+        <div><label>Elkészítés (perc)</label><input id="recPrep" type="number" value="30" /></div>
+      </div>
+      <label>Fő hozzávalók (soronként: Név; adagszám; egység — pl. Csirkemell; 1; adag)</label>
+      <textarea id="recMain" rows="4" placeholder="Csirkemell; 1; adag&#10;Tejszín; 1; db"></textarea>
+      <label>Törzskészlet / alapdolgok (vesszővel, mennyiség nélkül)</label>
+      <input id="recStaples" placeholder="rizs, olaj, só, bors" />
+      <label>Elkészítés / megjegyzés</label>
+      <textarea id="recSteps" rows="3"></textarea>
+      <div class="row" style="margin-top:14px;">
+        <button id="deleteRecipeBtn" class="btn btn-danger" style="display:none;" onclick="deleteCurrentRecipe()">Törlés</button>
+        <button class="btn btn-primary" style="flex:1;" onclick="saveRecipe()">Mentés</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- AI FELISMERÉS MODAL -->
+  <div id="aiModal" class="modal-bg" onclick="if(event.target===this)closeModal('aiModal')">
+    <div class="modal">
+      <div class="row"><h3 style="margin:0;">✨ AI Felismerés</h3><button class="btn btn-ghost btn-sm" onclick="closeModal('aiModal')">✕</button></div>
+      <div class="chips" style="margin-top:10px;">
+        <button class="chip active" id="aiMode-receipt" onclick="setAiMode('receipt')">🧾 Blokk / Számla</button>
+        <button class="chip" id="aiMode-photo" onclick="setAiMode('photo')">📸 Alapanyag fotó</button>
+        <button class="chip" id="aiMode-recipe" onclick="setAiMode('recipe')">📖 Recept</button>
+      </div>
+      <p class="muted" id="aiHelp" style="margin:4px 0 10px;">Bármilyen üzlet blokkja, képernyőmentése vagy PDF-je (idegen nyelvű is: pl. szlovák, német). Több képet is kijelölhetsz egyszerre.</p>
+      <div class="grid-2" style="margin-bottom:8px;">
+        <label class="btn btn-soft" style="margin:0;text-align:center;">
+          📷 Fotózás
+          <input type="file" accept="image/*" capture="environment" style="display:none;" onchange="handleAiFiles(this.files)" />
+        </label>
+        <label class="btn btn-soft" style="margin:0;text-align:center;">
+          📎 Képernyőmentés / PDF
+          <input type="file" accept="image/*,application/pdf" multiple style="display:none;" onchange="handleAiFiles(this.files)" />
+        </label>
+      </div>
+      <div id="aiFileList" class="muted" style="margin-bottom:8px;"></div>
+      <textarea id="aiText" rows="2" placeholder="Opcionális szöveg (pl. recept leírása vagy kiegészítés)..."></textarea>
+      <button id="aiRunBtn" class="btn btn-primary" style="width:100%;margin-top:8px;" onclick="runAi()">Felismerés indítása</button>
+      <div id="aiResultArea" style="margin-top:12px;"></div>
+    </div>
+  </div>
+
+  <!-- BEÁLLÍTÁSOK / SZINKRON / NAPLÓ MODAL -->
+  <div id="settingsModal" class="modal-bg" onclick="if(event.target===this)closeModal('settingsModal')">
+    <div class="modal">
+      <div class="row"><h3 style="margin:0;">⚙️ Szinkron, Mentés és Napló</h3><button class="btn btn-ghost btn-sm" onclick="closeModal('settingsModal')">✕</button></div>
+      <label>Google Apps Script Web App URL (beépítve, igény esetén cserélhető)</label>
+      <input id="cloudUrlInput" placeholder="https://script.google.com/macros/s/.../exec" />
+      <button class="btn btn-primary" style="width:100%;margin-top:8px;" onclick="saveCloudUrl()">URL mentése és szinkron</button>
+      <div class="muted" id="syncStatusText" style="margin-top:6px;"></div>
+
+      <hr style="border:none;border-top:1px solid var(--border);margin:14px 0;" />
+      <div class="grid-2">
+        <button class="btn btn-ghost" onclick="exportJson()">⬇️ JSON Export</button>
+        <label class="btn btn-ghost" style="margin:0;">⬆️ JSON Import<input type="file" accept=".json" style="display:none;" onchange="importJson(this.files[0])" /></label>
+      </div>
+
+      <h4 style="margin:14px 0 6px;">Utóbbi események</h4>
+      <div id="historyList" class="muted" style="max-height:180px;overflow-y:auto;"></div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+<script>
+const STORAGE_KEY = "kamra_app_v2_state";
+const CLOUD_URL_KEY = "kamra_app_v2_cloud_url";
+const DEFAULT_CLOUD_URL = "https://script.google.com/macros/s/AKfycbyByRGjECs__lpjBLBsCrVSkXauYME6yq1a2eWBTFdEe4StGSSMs8CHdZxhnDEPUjSQ0Q/exec";
+const DAYS = ["Hétfő", "Kedd", "Szerda", "Csütörtök", "Péntek", "Szombat", "Vasárnap"];
+const CAT_ORDER = ["Zöldség-gyümölcs", "Tejtermék", "Hús", "Szárazáru", "Egyéb"];
+
+let state = loadLocal();
+let activeLoc = "Összes";
+let fifoSort = false;
+let syncTimer = null;
+let aiMode = "receipt";
+let aiPendingFiles = [];
+let aiParsed = null;
+
+function getCloudUrl() {
+  const saved = localStorage.getItem(CLOUD_URL_KEY);
+  return (saved !== null && saved.trim() !== "") ? saved.trim() : DEFAULT_CLOUD_URL;
+}
+
+function defaultState() {
+  const today = new Date().toISOString().slice(0, 10);
+  return {
+    schemaVersion: 2,
+    updatedAt: 0,
+    items: [
+      { id: uid(), name: "Csirkemell", aliases: ["cs.mell", "kuracie prsia"], location: "Fagyasztó", category: "Hús", mode: "count", qty: 3, unit: "adag", status: "ok", addedAt: today, favorite: true, updatedAt: 0 },
+      { id: uid(), name: "Tejföl", aliases: ["smotana"], location: "Hűtő", category: "Tejtermék", mode: "count", qty: 1, unit: "db", status: "ok", addedAt: today, favorite: true, updatedAt: 0 },
+      { id: uid(), name: "Étolaj", aliases: ["napraforgó olaj"], location: "Kamra", category: "Szárazáru", mode: "status", qty: 1, unit: "db", status: "ok", addedAt: today, favorite: true, updatedAt: 0 },
+      { id: uid(), name: "Rizs", aliases: ["jázmin rizs"], location: "Kamra", category: "Szárazáru", mode: "status", qty: 1, unit: "csomag", status: "low", addedAt: today, favorite: true, updatedAt: 0 }
+    ],
+    recipes: [
+      { id: uid(), name: "Tejfölös csirkemell rizzsel", tags: ["gyors", "fagyasztóból"], prepMinutes: 30, mainIngredients: [{ name: "Csirkemell", qty: 1, unit: "adag" }, { name: "Tejföl", qty: 1, unit: "db" }], staples: ["Rizs", "Étolaj"], steps: "Csirkemellet lepirítjuk, tejföllel összeforraljuk, rizzsel tálaljuk.", lastCookedAt: null, updatedAt: 0 }
+    ],
+    menu: {},
+    manualShopping: [],
+    checkedAuto: {},
+    autoSyncMenu: true,
+    history: []
+  };
+}
+
+function uid() { return Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4); }
+function norm(s) { return (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim(); }
+function toast(msg) { const t = document.getElementById("toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(t._t); t._t = setTimeout(() => t.classList.remove("show"), 2600); }
+
+function loadLocal() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return defaultState();
+    const parsed = JSON.parse(raw);
+    if (!parsed.items) return defaultState();
+    return Object.assign(defaultState(), parsed);
+  } catch { return defaultState(); }
+}
+
+function saveLocal(triggerCloud = true) {
+  state.updatedAt = Date.now();
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  updateShopBadge();
+  if (triggerCloud) scheduleCloudPush();
+}
+
+function addHistory(type, label) {
+  state.history.unshift({ id: uid(), date: new Date().toLocaleString("hu-HU", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }), type, label });
+  if (state.history.length > 60) state.history.length = 60;
+}
+
+/* ---------- HÁTTÉRSZINKRON (NEM BLOKKOLÓ) ---------- */
+function setSyncDot(cls, title) {
+  const d = document.getElementById("syncDot");
+  d.className = "sync-dot " + cls;
+  d.title = title;
+  const st = document.getElementById("syncStatusText");
+  if (st) st.textContent = title;
+}
+
+function scheduleCloudPush() {
+  const url = getCloudUrl();
+  if (!url) { setSyncDot("off", "Nincs felhő URL beállítva"); return; }
+  setSyncDot("pending", "Mentésre vár...");
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(() => pushToCloud(), 2500);
+}
+
+async function pushToCloud() {
+  const url = getCloudUrl();
+  if (!url) return;
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ data: state })
+    });
+    const json = await res.json();
+    if (json.ok) setSyncDot("", "Szinkronizálva: " + new Date().toLocaleTimeString("hu-HU"));
+    else setSyncDot("err", "Szinkron hiba: " + (json.error || "ismeretlen"));
+  } catch {
+    setSyncDot("err", "Offline / hálózati hiba (helyben mentve)");
+  }
+}
+
+async function pullFromCloud(silent = true) {
+  const url = getCloudUrl();
+  if (!url) { setSyncDot("off", "Helyi mód"); return; }
+  try {
+    setSyncDot("pending", "Frissítés...");
+    const res = await fetch(url);
+    const json = await res.json();
+    if (json.ok && json.data && (json.updatedAt || 0) > (state.updatedAt || 0)) {
+      state = Object.assign(defaultState(), json.data);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      renderAll();
+      if (!silent) toast("Friss adatok letöltve a felhőből");
+    } else if (json.ok && ((state.updatedAt || 0) > (json.updatedAt || 0) || (!silent && !json.data))) {
+      if (!state.updatedAt) state.updatedAt = Date.now();
+      await pushToCloud();
+      if (!silent) toast("Adatok feltöltve a felhőbe");
+    }
+    setSyncDot("", "Szinkronizálva: " + new Date().toLocaleTimeString("hu-HU"));
+  } catch {
+    setSyncDot("err", "Offline mód (helyi adatok)");
+  }
+}
+
+function syncNow() { pullFromCloud(false); }
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "hidden" && syncTimer) {
+    clearTimeout(syncTimer);
+    syncTimer = null;
+    pushToCloud();
+  } else if (document.visibilityState === "visible") {
+    pullFromCloud(true);
+  }
+});
+
+/* ---------- NAVIGÁCIÓ ---------- */
+function switchTab(tab) {
+  document.querySelectorAll(".tab-view").forEach(el => el.classList.remove("active"));
+  document.getElementById("tab-" + tab).classList.add("active");
+  document.querySelectorAll("nav.bottom button").forEach(b => b.classList.toggle("active", b.dataset.tab === tab));
+  if (tab === "stock") renderStock();
+  if (tab === "recipes") renderRecipes();
+  if (tab === "menu") renderMenu();
+  if (tab === "shop") renderShop();
+}
+
+function openModal(id) { document.getElementById(id).classList.add("open"); }
+function closeModal(id) { document.getElementById(id).classList.remove("open"); }
+
+/* ---------- RAKTÁR (RÉSZLEGES DOM FRISSÍTÉSSEL) ---------- */
+function findItemByName(name) {
+  const n = norm(name);
+  return state.items.find(i => norm(i.name) === n || (i.aliases || []).some(a => norm(a) === n));
+}
+
+function renderStock() {
+  const locs = ["Összes", "Fagyasztó", "Hűtő", "Kamra", "Fogyóban / Elfogyott"];
+  document.getElementById("locChips").innerHTML = locs.map(l =>
+    `<button class="chip ${activeLoc === l ? "active" : ""}" onclick="activeLoc='${l}';renderStock()">${l}</button>`
+  ).join("");
+
+  const q = norm(document.getElementById("stockSearch").value);
+  let list = state.items.filter(i => {
+    const matchQ = !q || norm(i.name).includes(q) || (i.aliases || []).some(a => norm(a).includes(q));
+    if (!matchQ) return false;
+    if (activeLoc === "Összes") return true;
+    if (activeLoc === "Fogyóban / Elfogyott") return (i.mode === "status" && i.status !== "ok") || (i.mode === "count" && i.qty <= 0);
+    return i.location === activeLoc;
+  });
+
+  if (fifoSort) list.sort((a, b) => (a.addedAt || "9999").localeCompare(b.addedAt || "9999"));
+  else list.sort((a, b) => a.name.localeCompare(b.name, "hu"));
+
+  document.getElementById("stockSummary").textContent = `${list.length} tétel`;
+  document.getElementById("fifoBtn").classList.toggle("btn-soft", fifoSort);
+
+  const quick = state.items.filter(i => i.favorite && ((i.mode === "count" && i.qty === 0) || (i.mode === "status" && i.status !== "ok")));
+  document.getElementById("quickBar").innerHTML = quick.length
+    ? quick.map(i => `<button class="quick-pill" onclick="quickRestock('${i.id}')">+ ${i.name}</button>`).join("")
+    : "";
+
+  document.getElementById("stockList").innerHTML = list.length ? list.map(i => renderItemCard(i)).join("") : `<div class="card muted">Nincs találat ebben a nézetben.</div>`;
+  document.getElementById("itemNamesDatalist").innerHTML = state.items.map(i => `<option value="${esc(i.name)}">`).join("");
+}
+
+function renderItemCard(i) {
+  const dateBadge = i.addedAt ? `<span class="badge b-muted">📅 ${i.addedAt.slice(5).replace("-", ".")}</span>` : "";
+  const ctrl = i.mode === "count"
+    ? `<div class="qty-ctrl">
+         <button class="qty-btn" onclick="adjQty('${i.id}',-1)">−</button>
+         <span class="qty-val" id="qty-${i.id}">${i.qty} ${i.unit}</span>
+         <button class="qty-btn" onclick="adjQty('${i.id}',1)">+</button>
+       </div>`
+    : `<div class="status-group" id="st-${i.id}">
+         <button class="status-btn ${i.status === "ok" ? "s-ok" : ""}" onclick="setStatus('${i.id}','ok')">Van</button>
+         <button class="status-btn ${i.status === "low" ? "s-low" : ""}" onclick="setStatus('${i.id}','low')">Fogyó</button>
+         <button class="status-btn ${i.status === "out" ? "s-out" : ""}" onclick="setStatus('${i.id}','out')">Nincs</button>
+       </div>`;
+
+  return `<div class="card" id="card-${i.id}">
+    <div class="row">
+      <div style="flex:1;min-width:140px;cursor:pointer;" onclick="openItemModal('${i.id}')">
+        <div style="font-weight:700;font-size:15px;">${i.favorite ? "★ " : ""}${esc(i.name)}</div>
+        <div style="margin-top:4px;display:flex;gap:4px;flex-wrap:wrap;">
+          <span class="badge b-teal">${i.location}</span>
+          <span class="badge b-muted">${i.category}</span>
+          ${dateBadge}
+        </div>
+      </div>
+      ${ctrl}
+    </div>
+  </div>`;
+}
+
+function adjQty(id, delta) {
+  const item = state.items.find(x => x.id === id);
+  if (!item) return;
+  item.qty = Math.max(0, (item.qty || 0) + delta);
+  if (delta > 0 && !item.addedAt) item.addedAt = new Date().toISOString().slice(0, 10);
+  item.updatedAt = Date.now();
+  const el = document.getElementById("qty-" + id);
+  if (el) el.textContent = `${item.qty} ${item.unit}`;
+  saveLocal();
+}
+
+function setStatus(id, status) {
+  const item = state.items.find(x => x.id === id);
+  if (!item) return;
+  item.status = status;
+  item.updatedAt = Date.now();
+  const grp = document.getElementById("st-" + id);
+  if (grp) {
+    const btns = grp.querySelectorAll("button");
+    btns[0].className = "status-btn " + (status === "ok" ? "s-ok" : "");
+    btns[1].className = "status-btn " + (status === "low" ? "s-low" : "");
+    btns[2].className = "status-btn " + (status === "out" ? "s-out" : "");
+  }
+  saveLocal();
+}
+
+function quickRestock(id) {
+  const item = state.items.find(x => x.id === id);
+  if (!item) return;
+  if (item.mode === "count") item.qty = Math.max(1, item.qty + 1);
+  else item.status = "ok";
+  item.addedAt = new Date().toISOString().slice(0, 10);
+  saveLocal();
+  renderStock();
+  toast(`${item.name} pótolva`);
+}
+
+function toggleFifo() { fifoSort = !fifoSort; renderStock(); }
+
+function openItemModal(id = "") {
+  const item = state.items.find(x => x.id === id);
+  document.getElementById("editItemId").value = item ? item.id : "";
+  document.getElementById("itemModalTitle").textContent = item ? "Alapanyag szerkesztése" : "Új alapanyag";
+  document.getElementById("itemName").value = item ? item.name : "";
+  document.getElementById("itemLoc").value = item ? item.location : "Fagyasztó";
+  document.getElementById("itemCat").value = item ? item.category : "Hús";
+  document.getElementById("itemMode").value = item ? item.mode : "count";
+  document.getElementById("itemQty").value = item ? item.qty : 1;
+  document.getElementById("itemUnit").value = item ? item.unit : "adag";
+  document.getElementById("itemStatus").value = item ? item.status : "ok";
+  document.getElementById("itemDate").value = item ? (item.addedAt || "") : new Date().toISOString().slice(0, 10);
+  document.getElementById("itemFav").checked = item ? !!item.favorite : false;
+  document.getElementById("deleteItemBtn").style.display = item ? "inline-flex" : "none";
+  toggleModeFields();
+  openModal("itemModal");
+}
+
+function toggleModeFields() {
+  const isCount = document.getElementById("itemMode").value === "count";
+  document.getElementById("countFields").style.display = isCount ? "grid" : "none";
+  document.getElementById("statusFields").style.display = isCount ? "none" : "block";
+}
+
+function saveItem() {
+  const name = document.getElementById("itemName").value.trim();
+  if (!name) return toast("Adj meg nevet!");
+  const id = document.getElementById("editItemId").value;
+  const data = {
+    name,
+    location: document.getElementById("itemLoc").value,
+    category: document.getElementById("itemCat").value,
+    mode: document.getElementById("itemMode").value,
+    qty: Math.max(0, parseInt(document.getElementById("itemQty").value, 10) || 0),
+    unit: document.getElementById("itemUnit").value,
+    status: document.getElementById("itemStatus").value,
+    addedAt: document.getElementById("itemDate").value,
+    favorite: document.getElementById("itemFav").checked,
+    updatedAt: Date.now()
+  };
+  if (id) {
+    Object.assign(state.items.find(x => x.id === id), data);
+  } else {
+    state.items.push(Object.assign({ id: uid(), aliases: [] }, data));
+  }
+  saveLocal();
+  closeModal("itemModal");
+  renderStock();
+}
+
+function deleteCurrentItem() {
+  const id = document.getElementById("editItemId").value;
+  if (!id || !confirm("Biztosan törlöd?")) return;
+  state.items = state.items.filter(x => x.id !== id);
+  saveLocal();
+  closeModal("itemModal");
+  renderStock();
+}
+
+/* ---------- RECEPTEK ---------- */
+function recipeMissing(rec, mult = 1) {
+  const miss = [];
+  (rec.mainIngredients || []).forEach(ing => {
+    const stock = findItemByName(ing.name);
+    const have = stock ? (stock.mode === "count" ? stock.qty : (stock.status === "out" ? 0 : 99)) : 0;
+    const need = (ing.qty || 1) * mult;
+    if (have < need) miss.push({ name: ing.name, qty: need - have, unit: ing.unit || "adag" });
+  });
+  return miss;
+}
+
+function renderRecipes() {
+  const q = norm(document.getElementById("recipeSearch").value);
+  const list = state.recipes.filter(r => !q || norm(r.name).includes(q) || (r.tags || []).some(t => norm(t).includes(q)));
+  document.getElementById("recipeCount").textContent = `${list.length} recept`;
+  document.getElementById("recipeList").innerHTML = list.length ? list.map(r => {
+    const miss = recipeMissing(r, 1);
+    const badge = miss.length === 0 ? `<span class="badge b-ok">Készleten</span>` : `<span class="badge b-warn">Hiányzik: ${miss.map(m => `${m.qty} ${m.unit} ${m.name}`).join(", ")}</span>`;
+    const tags = (r.tags || []).map(t => `<span class="badge b-muted">#${esc(t)}</span>`).join(" ");
+    return `<div class="card">
+      <div class="row">
+        <div style="flex:1;cursor:pointer;" onclick="openRecipeModal('${r.id}')">
+          <strong>${esc(r.name)}</strong> <span class="muted">(${r.prepMinutes || 30} perc)</span>
+          <div style="margin-top:4px;display:flex;gap:4px;flex-wrap:wrap;">${badge} ${tags}</div>
+          <div class="muted" style="margin-top:4px;">Fő: ${(r.mainIngredients || []).map(i => `${i.name} (${i.qty} ${i.unit})`).join(", ") || "—"}</div>
+        </div>
+        <button class="btn btn-soft btn-sm" onclick="cookRecipe('${r.id}',1)">Megfőztem ✓</button>
+      </div>
+    </div>`;
+  }).join("") : `<div class="card muted">Még nincs recepted.</div>`;
+}
+
+function cookRecipe(recipeId, mult = 1) {
+  const rec = state.recipes.find(r => r.id === recipeId);
+  if (!rec) return;
+  (rec.mainIngredients || []).forEach(ing => {
+    const stock = findItemByName(ing.name);
+    if (stock && stock.mode === "count") stock.qty = Math.max(0, stock.qty - (ing.qty || 1) * mult);
+  });
+  rec.lastCookedAt = Date.now();
+  addHistory("cook", `${rec.name} (${mult}x)`);
+  saveLocal();
+  renderRecipes();
+  toast(`Levontam a hozzávalókat: ${rec.name}`);
+}
+
+function openRecipeModal(id = "") {
+  const r = state.recipes.find(x => x.id === id);
+  document.getElementById("editRecipeId").value = r ? r.id : "";
+  document.getElementById("recipeModalTitle").textContent = r ? "Recept szerkesztése" : "Új recept";
+  document.getElementById("recName").value = r ? r.name : "";
+  document.getElementById("recTags").value = r ? (r.tags || []).join(", ") : "";
+  document.getElementById("recPrep").value = r ? (r.prepMinutes || 30) : 30;
+  document.getElementById("recMain").value = r ? (r.mainIngredients || []).map(i => `${i.name}; ${i.qty}; ${i.unit}`).join("\n") : "";
+  document.getElementById("recStaples").value = r ? (r.staples || []).join(", ") : "";
+  document.getElementById("recSteps").value = r ? (r.steps || "") : "";
+  document.getElementById("deleteRecipeBtn").style.display = r ? "inline-flex" : "none";
+  openModal("recipeModal");
+}
+
+function saveRecipe() {
+  const name = document.getElementById("recName").value.trim();
+  if (!name) return toast("Adj meg receptnevet!");
+  const mainIngredients = document.getElementById("recMain").value.split("\n").map(l => l.trim()).filter(Boolean).map(l => {
+    const [n, q, u] = l.split(";").map(x => (x || "").trim());
+    return { name: n, qty: Math.max(1, parseInt(q, 10) || 1), unit: u || "adag" };
+  });
+  const data = {
+    name,
+    tags: document.getElementById("recTags").value.split(",").map(s => s.trim()).filter(Boolean),
+    prepMinutes: parseInt(document.getElementById("recPrep").value, 10) || 30,
+    mainIngredients,
+    staples: document.getElementById("recStaples").value.split(",").map(s => s.trim()).filter(Boolean),
+    steps: document.getElementById("recSteps").value.trim(),
+    updatedAt: Date.now()
+  };
+  const id = document.getElementById("editRecipeId").value;
+  if (id) Object.assign(state.recipes.find(x => x.id === id), data);
+  else state.recipes.push(Object.assign({ id: uid(), lastCookedAt: null }, data));
+  saveLocal();
+  closeModal("recipeModal");
+  renderRecipes();
+}
+
+function deleteCurrentRecipe() {
+  const id = document.getElementById("editRecipeId").value;
+  if (!id || !confirm("Törlöd a receptet?")) return;
+  state.recipes = state.recipes.filter(x => x.id !== id);
+  saveLocal();
+  closeModal("recipeModal");
+  renderRecipes();
+}
+
+/* ---------- HETI MENÜ ---------- */
+function renderMenu() {
+  const opts = `<option value="">— nincs választva —</option>` + state.recipes.map(r => `<option value="${r.id}">${esc(r.name)}</option>`).join("");
+  let planned = 0;
+  document.getElementById("menuDays").innerHTML = DAYS.map(day => {
+    const slot = state.menu[day] || { lunch: null, dinner: null };
+    if (slot.lunch?.recipeId) planned++;
+    if (slot.dinner?.recipeId) planned++;
+    return `<div class="card">
+      <strong>${day}</strong>
+      ${renderMealSlot(day, "lunch", "Ebéd", slot.lunch, opts)}
+      ${renderMealSlot(day, "dinner", "Vacsora", slot.dinner, opts)}
+    </div>`;
+  }).join("");
+  document.getElementById("menuSummary").textContent = `${planned} étkezés tervezve erre a hétre`;
+}
+
+function renderMealSlot(day, meal, label, data, opts) {
+  const recId = data?.recipeId || "";
+  const mult = data?.multiplier || 1;
+  const cooked = !!data?.cooked;
+  const sel = opts.replace(`value="${recId}"`, `value="${recId}" selected`);
+  return `<div style="margin-top:8px;">
+    <div class="muted" style="margin-bottom:3px;">${label}</div>
+    <div class="row">
+      <select style="flex:1;" onchange="setMenuMeal('${day}','${meal}',this.value)">${sel}</select>
+      ${recId ? `
+        <button class="btn btn-ghost btn-sm" onclick="toggleMenuMult('${day}','${meal}')">${mult}x</button>
+        <button class="btn ${cooked ? "btn-primary" : "btn-soft"} btn-sm" onclick="toggleMenuCooked('${day}','${meal}')">${cooked ? "Kész ✓" : "Megfőztem"}</button>
+      ` : ""}
+    </div>
+  </div>`;
+}
+
+function setMenuMeal(day, meal, recipeId) {
+  if (!state.menu[day]) state.menu[day] = { lunch: null, dinner: null };
+  state.menu[day][meal] = recipeId ? { recipeId, multiplier: 1, cooked: false } : null;
+  saveLocal();
+  renderMenu();
+}
+
+function toggleMenuMult(day, meal) {
+  const s = state.menu[day]?.[meal];
+  if (!s) return;
+  s.multiplier = s.multiplier === 1 ? 2 : 1;
+  saveLocal();
+  renderMenu();
+}
+
+function toggleMenuCooked(day, meal) {
+  const s = state.menu[day]?.[meal];
+  if (!s) return;
+  const rec = state.recipes.find(r => r.id === s.recipeId);
+  if (!rec) return;
+  const dir = s.cooked ? 1 : -1;
+  (rec.mainIngredients || []).forEach(ing => {
+    const stock = findItemByName(ing.name);
+    if (stock && stock.mode === "count") stock.qty = Math.max(0, stock.qty + dir * (ing.qty || 1) * (s.multiplier || 1));
+  });
+  s.cooked = !s.cooked;
+  if (s.cooked) { rec.lastCookedAt = Date.now(); addHistory("cook", `${day} – ${rec.name}`); }
+  saveLocal();
+  renderMenu();
+}
+
+function autoFillMenu() {
+  if (!state.recipes.length) return toast("Előbb vegyél fel legalább egy receptet!");
+  const sorted = [...state.recipes].sort((a, b) => (recipeMissing(a).length - recipeMissing(b).length) || ((a.lastCookedAt || 0) - (b.lastCookedAt || 0)));
+  DAYS.forEach((day, idx) => {
+    if (!state.menu[day]) state.menu[day] = { lunch: null, dinner: null };
+    if (!state.menu[day].lunch) state.menu[day].lunch = { recipeId: sorted[idx % sorted.length].id, multiplier: 1, cooked: false };
+  });
+  saveLocal();
+  renderMenu();
+  toast("Heti ebédek kitöltve készlet alapján");
+}
+
+function clearMenu() { if (confirm("Üríted a heti menüt?")) { state.menu = {}; saveLocal(); renderMenu(); } }
+
+/* ---------- BEVÁSÁRLÓLISTA (BOLTI KATEGÓRIÁKKAL) ---------- */
+function computeShoppingList() {
+  const list = [];
+  if (state.autoSyncMenu) {
+    const needed = {};
+    DAYS.forEach(day => {
+      ["lunch", "dinner"].forEach(m => {
+        const s = state.menu[day]?.[m];
+        if (!s || !s.recipeId || s.cooked) return;
+        const rec = state.recipes.find(r => r.id === s.recipeId);
+        if (!rec) return;
+        (rec.mainIngredients || []).forEach(ing => {
+          const k = norm(ing.name);
+          if (!needed[k]) needed[k] = { name: ing.name, qty: 0, unit: ing.unit || "adag", days: [] };
+          needed[k].qty += (ing.qty || 1) * (s.multiplier || 1);
+          if (!needed[k].days.includes(day)) needed[k].days.push(day);
+        });
+      });
+    });
+
+    Object.entries(needed).forEach(([k, req]) => {
+      const stock = findItemByName(req.name);
+      const have = stock ? (stock.mode === "count" ? stock.qty : (stock.status === "out" ? 0 : 99)) : 0;
+      if (req.qty > have) {
+        const diff = req.qty - have;
+        const key = "menu:" + k;
+        list.push({ key, source: "Heti menü", name: stock ? stock.name : req.name, qty: diff, unit: req.unit, category: stock?.category || "Egyéb", note: req.days.join(", "), checked: !!state.checkedAuto[key] });
+      }
+    });
+
+    state.items.filter(i => i.mode === "status" && i.status !== "ok").forEach(i => {
+      const key = "staple:" + i.id;
+      list.push({ key, source: i.status === "out" ? "Elfogyott" : "Fogyóban", name: i.name, qty: 1, unit: "db", category: i.category || "Egyéb", itemId: i.id, isStaple: true, checked: !!state.checkedAuto[key] });
+    });
+  }
+
+  state.manualShopping.forEach(m => {
+    list.push({ key: "man:" + m.id, id: m.id, source: "Kézi", name: m.name, qty: m.qty || 1, unit: m.unit || "db", category: m.category || "Egyéb", checked: !!m.checked, manual: true });
+  });
+
+  return list;
+}
+
+function updateShopBadge() {
+  const n = computeShoppingList().filter(x => !x.checked).length;
+  const b = document.getElementById("shopBadge");
+  b.style.display = n > 0 ? "inline-block" : "none";
+  b.textContent = n;
+}
+
+function renderShop() {
+  document.getElementById("autoMenuToggle").checked = !!state.autoSyncMenu;
+  const items = computeShoppingList();
+  if (!items.length) {
+    document.getElementById("shopList").innerHTML = `<div class="card muted">A bevásárlólista jelenleg üres.</div>`;
+    return;
+  }
+  const grouped = {};
+  items.forEach(it => { (grouped[it.category] = grouped[it.category] || []).push(it); });
+
+  let html = "";
+  CAT_ORDER.forEach(cat => {
+    if (!grouped[cat]) return;
+    html += `<div class="cat-title">${cat}</div><div class="card" style="padding:4px 12px;">`;
+    html += grouped[cat].map(it => `<div class="check-row">
+      <input type="checkbox" ${it.checked ? "checked" : ""} onchange="toggleShopCheck('${it.key}',${!!it.manual},this.checked)" />
+      <div style="flex:1;" class="${it.checked ? "strike" : ""}">
+        <div><strong>${esc(it.name)}</strong> ${it.isStaple ? "" : `– ${it.qty} ${it.unit}`}</div>
+        <div class="muted"><span class="badge ${it.manual ? "b-muted" : (it.isStaple ? "b-warn" : "b-ok")}">${it.source}</span> ${it.note || ""}</div>
+      </div>
+      ${it.manual ? `<button class="btn btn-ghost btn-sm" onclick="delManualShop('${it.id}')">✕</button>` : ""}
+    </div>`).join("");
+    html += `</div>`;
+  });
+  document.getElementById("shopList").innerHTML = html;
+}
+
+function toggleAutoMenu(v) { state.autoSyncMenu = v; saveLocal(); renderShop(); }
+function addManualShop() {
+  const inp = document.getElementById("manualShopInput");
+  const name = inp.value.trim();
+  if (!name) return;
+  const stock = findItemByName(name);
+  state.manualShopping.push({ id: uid(), name, qty: 1, unit: stock?.unit || "db", category: stock?.category || "Egyéb", checked: false });
+  inp.value = "";
+  saveLocal();
+  renderShop();
+}
+function delManualShop(id) { state.manualShopping = state.manualShopping.filter(x => x.id !== id); saveLocal(); renderShop(); }
+function toggleShopCheck(key, isManual, checked) {
+  if (isManual) {
+    const m = state.manualShopping.find(x => "man:" + x.id === key);
+    if (m) m.checked = checked;
+  } else {
+    if (checked) state.checkedAuto[key] = true; else delete state.checkedAuto[key];
+  }
+  saveLocal();
+  renderShop();
+}
+
+function moveCheckedToStock() {
+  const checked = computeShoppingList().filter(x => x.checked);
+  if (!checked.length) return toast("Pipálj ki legalább egy tételt!");
+  const today = new Date().toISOString().slice(0, 10);
+  checked.forEach(it => {
+    const stock = it.itemId ? state.items.find(x => x.id === it.itemId) : findItemByName(it.name);
+    if (stock) {
+      if (stock.mode === "status") stock.status = "ok";
+      else stock.qty = (stock.qty || 0) + (it.qty || 1);
+      stock.addedAt = today;
+    } else {
+      state.items.push({ id: uid(), name: it.name, aliases: [], location: "Kamra", category: it.category || "Egyéb", mode: "count", qty: it.qty || 1, unit: it.unit || "db", status: "ok", addedAt: today, favorite: false, updatedAt: Date.now() });
+    }
+    if (it.manual) state.manualShopping = state.manualShopping.filter(x => x.id !== it.id);
+    else delete state.checkedAuto[it.key];
+  });
+  addHistory("shop", `${checked.length} tétel bevételezve`);
+  saveLocal();
+  renderShop();
+  toast(`${checked.length} tétel bekerült a raktárba!`);
+}
+
+/* ---------- AI FELISMERÉS (BÁRMILYEN BOLT / NYELV / PDF / TÖBB KÉP) ---------- */
+function openAiModal() {
+  aiPendingFiles = [];
+  aiParsed = null;
+  document.getElementById("aiFileList").textContent = "";
+  document.getElementById("aiText").value = "";
+  document.getElementById("aiResultArea").innerHTML = "";
+  openModal("aiModal");
+}
+
+function setAiMode(m) {
+  aiMode = m;
+  ["receipt", "photo", "recipe"].forEach(x => document.getElementById("aiMode-" + x).classList.toggle("active", x === m));
+  const help = {
+    receipt: "Bármilyen üzlet blokkja, képernyőmentése vagy PDF-je (idegen nyelvű is: pl. szlovák, német). Több képet is kijelölhetsz.",
+    photo: "Fotózd le a kipakolt alapanyagokat vagy a hűtő polcát.",
+    recipe: "Fotózz le egy receptet, vagy másold be ide a szövegét."
+  };
+  document.getElementById("aiHelp").textContent = help[m];
+}
+
+async function handleAiFiles(fileList) {
+  const arr = Array.from(fileList || []);
+  for (const f of arr) {
+    if (f.type === "application/pdf") {
+      const b64 = await fileToBase64(f);
+      aiPendingFiles.push({ name: f.name, mimeType: "application/pdf", data: b64 });
+    } else if (f.type.startsWith("image/")) {
+      const b64 = await compressImage(f);
+      aiPendingFiles.push({ name: f.name, mimeType: "image/jpeg", data: b64 });
+    }
+  }
+  document.getElementById("aiFileList").textContent = `Csatolva (${aiPendingFiles.length}): ` + aiPendingFiles.map(f => f.name).join(", ");
+}
+
+function fileToBase64(file) {
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = () => res(r.result.split(",")[1]);
+    r.onerror = rej;
+    r.readAsDataURL(file);
+  });
+}
+
+function compressImage(file) {
+  return new Promise((res, rej) => {
+    const img = new Image();
+    img.onload = () => {
+      const maxW = 1100;
+      const scale = img.width > maxW ? maxW / img.width : 1;
+      const c = document.createElement("canvas");
+      c.width = Math.round(img.width * scale);
+      c.height = Math.round(img.height * scale);
+      c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+      res(c.toDataURL("image/jpeg", 0.75).split(",")[1]);
+    };
+    img.onerror = rej;
+    img.src = URL.createObjectURL(file);
+  });
+}
+
+async function callGemini(prompt, files = []) {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), 35000);
+  try {
+    const res = await fetch("/.netlify/functions/gemini", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt, files, jsonMode: true }),
+      signal: ctrl.signal
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "API hiba");
+    const clean = (data.text || "").replace(/^```json\s*/i, "").replace(/```$/i, "").trim();
+    return JSON.parse(clean);
+  } finally { clearTimeout(t); }
+}
+
+async function runAi() {
+  const txt = document.getElementById("aiText").value.trim();
+  if (!aiPendingFiles.length && !txt) return toast("Csatolj képet/PDF-et vagy írj szöveget!");
+  const btn = document.getElementById("aiRunBtn");
+  btn.disabled = true; btn.textContent = "Feldolgozás...";
+  const existing = state.items.map(i => i.name).join(", ");
+
+  let prompt = "";
+  if (aiMode === "receipt" || aiMode === "photo") {
+    prompt = `Elemezd a csatolt bolti blokkot/számlát vagy alapanyagfotót (bármilyen országból és nyelvről: magyar, szlovák, német, angol stb.).
+Szabályok:
+- Minden élelmiszer nevét fordítsd le egyszerű, rövid MAGYAR alapanyagnévre. Ha létezik a meglévő raktárban hasonló (${existing}), azt a pontos nevet használd!
+- Szedd le a márkaneveket és kiszereléseket, de az eredeti blokkszöveget add meg a "rawName" mezőben.
+- Hagyd ki a nem élelmiszer sorokat (betétdíj, záloha, obal, szatyor, tisztítószer, kedvezmény, végösszeg).
+- Alapdolgoknál (olaj, liszt, só, cukor, rizs, tészta, fűszer) a mode legyen "status", húsoknál/tejterméknél/zöldségnél/fagyasztottnál "count" egész számú qty-vel.
+Válaszolj CSAK JSON tömbbel:
+[{"name":"Csirkemell","rawName":"Kuracie prsia 500g","mode":"count","qty":1,"unit":"adag","location":"Hűtő","category":"Hús"}]
+Tárolás értékei: "Fagyasztó", "Hűtő", "Kamra". Kategória értékei: "Hús", "Tejtermék", "Zöldség-gyümölcs", "Szárazáru", "Egyéb". ${txt}`;
+  } else {
+    prompt = `Nyerd ki a receptet magyarul. Válaszolj CSAK JSON objektummal:
+{"name":"...","tags":["gyors"],"prepMinutes":30,"mainIngredients":[{"name":"Csirkemell","qty":1,"unit":"adag"}],"staples":["olaj","só"],"steps":"Rövid elkészítés"}
+Szöveg: ${txt}`;
+  }
+
+  try {
+    aiParsed = await callGemini(prompt, aiPendingFiles);
+    renderAiPreview();
+  } catch (e) {
+    document.getElementById("aiResultArea").innerHTML = `<div class="card b-err">Hiba: ${esc(e.message)}</div>`;
+  } finally {
+    btn.disabled = false; btn.textContent = "Felismerés indítása";
+  }
+}
+
+function renderAiPreview() {
+  const area = document.getElementById("aiResultArea");
+  if (aiMode === "recipe" && aiParsed && !Array.isArray(aiParsed)) {
+    area.innerHTML = `<div class="card">
+      <strong>${esc(aiParsed.name)}</strong>
+      <div class="muted" style="margin:6px 0;">Fő: ${(aiParsed.mainIngredients || []).map(i => `${i.name} (${i.qty} ${i.unit})`).join(", ")}</div>
+      <div class="muted">${esc(aiParsed.steps || "")}</div>
+      <button class="btn btn-primary" style="width:100%;margin-top:10px;" onclick="saveAiRecipe()">Recept mentése</button>
+    </div>`;
+    return;
+  }
+  if (!Array.isArray(aiParsed) || !aiParsed.length) {
+    area.innerHTML = `<div class="card muted">Nem találtam menthető élelmiszert.</div>`;
+    return;
+  }
+  area.innerHTML = `<div class="card" style="padding:8px 12px;">
+    <strong>Felismert tételek (${aiParsed.length})</strong>
+    ${aiParsed.map((it, idx) => `<div class="check-row">
+      <input type="checkbox" id="aiChk-${idx}" checked />
+      <div style="flex:1;">
+        <input id="aiName-${idx}" value="${esc(it.name)}" style="padding:6px 8px;font-size:14px;" />
+        <div class="muted" style="margin-top:3px;">${it.mode === "count" ? `${it.qty} ${it.unit}` : "Törzskészlet (Van)"} • ${it.location} • ${it.category} ${it.rawName ? `(${esc(it.rawName)})` : ""}</div>
+      </div>
+    </div>`).join("")}
+    <button class="btn btn-primary" style="width:100%;margin-top:10px;" onclick="saveAiItems()">Kijelöltek bevételezése</button>
+  </div>`;
+}
+
+function saveAiItems() {
+  const today = new Date().toISOString().slice(0, 10);
+  let count = 0;
+  aiParsed.forEach((it, idx) => {
+    if (!document.getElementById("aiChk-" + idx)?.checked) return;
+    const name = document.getElementById("aiName-" + idx).value.trim() || it.name;
+    const existing = findItemByName(name) || (it.rawName ? findItemByName(it.rawName) : null);
+    if (existing) {
+      if (existing.mode === "count") existing.qty += (it.qty || 1);
+      else existing.status = "ok";
+      existing.addedAt = today;
+      if (it.rawName && !(existing.aliases || []).includes(it.rawName)) {
+        existing.aliases = existing.aliases || [];
+        existing.aliases.push(it.rawName);
+      }
+    } else {
+      state.items.push({
+        id: uid(), name, aliases: it.rawName ? [it.rawName] : [],
+        location: it.location || "Kamra", category: it.category || "Egyéb",
+        mode: it.mode || "count", qty: it.qty || 1, unit: it.unit || "adag",
+        status: "ok", addedAt: today, favorite: false, updatedAt: Date.now()
+      });
+    }
+    count++;
+  });
+  addHistory("shop", `AI bevételezés: ${count} tétel`);
+  saveLocal();
+  closeModal("aiModal");
+  renderStock();
+  toast(`${count} tétel hozzáadva a raktárhoz!`);
+}
+
+function saveAiRecipe() {
+  state.recipes.push(Object.assign({ id: uid(), lastCookedAt: null, updatedAt: Date.now() }, aiParsed));
+  saveLocal();
+  closeModal("aiModal");
+  switchTab("recipes");
+  toast("Recept elmentve!");
+}
+
+async function aiSuggestRecipes() {
+  const stockList = state.items.filter(i => (i.mode === "count" && i.qty > 0) || (i.mode === "status" && i.status !== "out")).map(i => i.name).join(", ");
+  if (!stockList) return toast("Üres a raktárkészlet!");
+  toast("AI receptötletek keresése...");
+  try {
+    const ideas = await callGemini(`Adj 3 gyors, házias magyar receptötletet ezekből az alapanyagokból: ${stockList}. Válaszolj CSAK JSON tömbbel: [{"name":"...","tags":["ai-ötlet"],"prepMinutes":30,"mainIngredients":[{"name":"...","qty":1,"unit":"adag"}],"staples":["só"],"steps":"Rövid leírás"}]`);
+    if (Array.isArray(ideas) && ideas.length) {
+      ideas.forEach(r => state.recipes.unshift(Object.assign({ id: uid(), lastCookedAt: null, updatedAt: Date.now() }, r)));
+      saveLocal();
+      renderRecipes();
+      toast(`${ideas.length} új AI receptötlet hozzáadva!`);
+    }
+  } catch (e) { toast("AI hiba: " + e.message); }
+}
+
+/* ---------- BEÁLLÍTÁSOK, EXPORT/IMPORT ---------- */
+function openSettingsModal() {
+  document.getElementById("cloudUrlInput").value = getCloudUrl();
+  document.getElementById("historyList").innerHTML = state.history.length
+    ? state.history.map(h => `<div style="padding:4px 0;border-bottom:1px solid var(--border);">${h.type === "cook" ? "🍳" : "🛒"} <strong>${h.date}</strong> – ${esc(h.label)}</div>`).join("")
+    : "Még nincs naplózott esemény.";
+  openModal("settingsModal");
+}
+
+function saveCloudUrl() {
+  const url = document.getElementById("cloudUrlInput").value.trim();
+  if (url && url !== DEFAULT_CLOUD_URL) localStorage.setItem(CLOUD_URL_KEY, url);
+  else localStorage.removeItem(CLOUD_URL_KEY);
+  pullFromCloud(false);
+  toast("Beállítás mentve");
+}
+
+function exportJson() {
+  const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `kamra-mentes-${new Date().toISOString().slice(0, 10)}.json`;
+  a.click();
+}
+
+function importJson(file) {
+  if (!file) return;
+  const r = new FileReader();
+  r.onload = () => {
+    try {
+      const parsed = JSON.parse(r.result);
+      if (!parsed.items) throw new Error();
+      state = Object.assign(defaultState(), parsed);
+      saveLocal();
+      renderAll();
+      closeModal("settingsModal");
+      toast("Adatok sikeresen visszaállítva!");
+    } catch { toast("Hibás JSON fájl!"); }
+  };
+  r.readAsText(file);
+}
+
+function esc(s) { return String(s || "").replace(/[&<>"']/g, m => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m])); }
+function renderAll() { renderStock(); renderRecipes(); renderMenu(); renderShop(); updateShopBadge(); }
+
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("./sw.js").catch(() => {});
+renderAll();
+pullFromCloud(true);
+</script>
+</body>
+</html>
